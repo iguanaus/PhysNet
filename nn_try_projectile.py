@@ -103,7 +103,7 @@ def get_data(percentTest=.2,random_state=42):
     #Gen the y data
     
     #g = -.2394
-    num_entries = 100000
+    num_entries = 1000000
     #min_val = 0.0
     #max_val = 100.0
     
@@ -208,7 +208,7 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
         while curEpoch < numEpochs:
             batch_x = train_X[step * n_batch : (step+1) * n_batch]
             batch_y = train_Y[step * n_batch : (step+1) * n_batch]
-            #print(batch_x)
+            #print(batch_x[0])
             #print(batch_y)
             sess.run(optimizer, feed_dict={X: batch_x, y: batch_y})
             myvals, new_loss = sess.run([yhat,cost],feed_dict={X:batch_x,y:batch_y})
@@ -241,12 +241,12 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(
         description="Physics Net Training")
     parser.add_argument("--reuse_weights",type=str,default='False')
-    parser.add_argument("--output_folder",type=str,default='results/Project_1')
+    parser.add_argument("--output_folder",type=str,default='results/Project_1/')
         #Generate the loss file/val file name by looking to see if there is a previous one, then creating/running it.
     parser.add_argument("--weight_name_load",type=str,default="")#This would be something that goes infront of w_1.txt. This would be used in saving the weights
     parser.add_argument("--weight_name_save",type=str,default="")
     parser.add_argument("--n_batch",type=int,default=1000)
-    parser.add_argument("--numEpochs",type=int,default=50)
+    parser.add_argument("--numEpochs",type=int,default=500)
     parser.add_argument("--lr_rate",default=.1)
     parser.add_argument("--lr_decay",default=.9)
     parser.add_argument("--num_layers",default=1)
