@@ -28,19 +28,26 @@ def init_bias(shape):
     biases = tf.random_normal([shape], stddev=.1)
     return tf.Variable(biases)
 
-def save_weights(weights,biases,output_folder,weight_name_save,num_layers):
+def save_weights(weights,biases,output_folder,weight_name_save,num_layers,embedding):
     print("Biases: " , biases, len(biases))
     for i in xrange(0, len(weights)):
         weight_i = weights[i].eval()
         np.savetxt(output_folder+weight_name_save+"w_"+str(i)+".txt",weight_i,delimiter=',')
         bias_i = biases[i].eval()
         np.savetxt(output_folder+weight_name_save+"b_"+str(i)+".txt",bias_i,delimiter=',')
+    np.savetxt(output_folder+weight_name_save+"e_0.txt",embedding.eval(),delimiter=',')
+
     return
 
 def load_weights(output_folder,weight_load_name,num_layers):
     weights = []
     biases = []
     #Fine if everything is 2D
+    try:
+        embedding = np.loadtxt(output_folder+weight_load_name+"e_0.txt",delimiter=',')
+        embedding = tf.Variable(embedding,dtype=tf.float32)
+    except:
+        pass
     for i in xrange(0,1000):
         try:
             weight_i = np.loadtxt(output_folder+weight_load_name+"w_"+str(i)+".txt",delimiter=',')
@@ -53,25 +60,25 @@ def load_weights(output_folder,weight_load_name,num_layers):
             break
     #If it needs to be one D
     if True:
-        print("weights:")
-        print(weights)
+        #print("weights:")
+        #print(weights)
         num_layers = len(weights)-1
         weight_1 = np.loadtxt(output_folder+weight_load_name+"w_"+str(num_layers)+".txt",delimiter=',')
         weight_new_1 = tf.Variable(weight_1,dtype=tf.float32)
         weights[-1] = weight_new_1
 
         bias_1 = np.loadtxt(output_folder+weight_load_name+"b_"+str(num_layers)+".txt",delimiter=',')
-        print("bias: " , bias_1)
+        #print("bias: " , bias_1)
         bias_new_1 = tf.Variable(bias_1,dtype=tf.float32)
         biases[-1] = bias_new_1
 
 
         #print(weights)
-    print("biases: " , len(biases))
-    print("weights: " , len(weights))
+    #print("biases: " , len(biases))
+    #print("weights: " , len(weights))
 
 
-    return weights , biases
+    return weights , biases, embedding
 
 
 
@@ -84,7 +91,7 @@ def forwardprop(X, weights, biases, num_layers,dropout=False):
     htemp = tf.add(tf.nn.sigmoid(tf.matmul(htemp,weights[3])),biases[3]) #Now third 10
     htemp = tf.add(tf.nn.sigmoid(tf.matmul(htemp,weights[4])),biases[4]) #Now last layer
     yval = tf.add(tf.matmul(htemp,weights[-1]),biases[-1])
-    print("Last bias: " , biases[-1])
+    #print("Last bias: " , biases[-1])
     return (yval)
 
 #This method reads from the 'X' and 'Y' file and gives in the input as an array of arrays (aka if the input dim is 5 and there are 10 training sets, the input is a 10X 5 array)
@@ -111,39 +118,27 @@ def get_data(percentTest=.2,random_state=42):
         t = random.uniform(0.0,.5)
         dt = random.uniform(0.0,.5)
 
-        x0 = t
         x1 = y0 + v*t+-0.5*g*t*t
         x2 = y0 + v*(t+dt)+-0.5*g*(t+dt)*(t+dt)
         x3 = y0 + v*(t+2*dt)+-0.5*g*(t+2*dt)*(t+2*dt)
         x4 = y0 + v*(t+3*dt)+-0.5*g*(t+3*dt)*(t+3*dt)
-        #x5 = y0 + v*(t+4*dt)+-0.5*g*(t+4*dt)*(t+4*dt)
-        #x6 = y0 + v*(t+5*dt)+-0.5*g*(t+5*dt)*(t+5*dt)
-        #x7 = y0 + v*(t+6*dt)+-0.5*g*(t+6*dt)*(t+6*dt)
-        #x8 = y0 + v*(t+7*dt)+-0.5*g*(t+7*dt)*(t+7*dt)
-        x9 = y0 + v*(t+8*dt)+-0.5*g*(t+8*dt)*(t+8*dt)
-        #x10 = y0 + v*(t+9*dt)+-0.5*g*(t+9*dt)*(t+9*dt)
-        #x11 = y0 + v*(t+10*dt)+-0.5*g*(t+10*dt)*(t+10*dt)
-        #x12 = y0 + v*(t+11*dt)+-0.5*g*(t+11*dt)*(t+11*dt)
-        x20 = y0 + v*(t+19*dt)+-0.5*g*(t+19*dt)*(t+19*dt)
-        #x30 = y0 + v*(t+29*dt)+-0.5*g*(t+20*dt)*(t+20*dt)
 
 
-        x[i] = [x1,x2,x3]
-        y[i] = [x4]
+        x_temp = [x1,x2,x3]
+        y_temp = [x4]
+        if (min(x_temp) > 0.0 and min(y_temp) > 0.0 and max(x_temp) < 1.0 and max(y_temp) < 1.0):
+            x[i] = [x1,x2,x3]
+            y[i] = [x4]
 
-        #randNum1 = random.uniform(min_val, max_val)
-        #randNum2 = randNum1#random.uniform(min_val, max_val)
-        #x[i] = [randNum1,randNum2]
-        #y[i] = [randNum1*randNum2]
     #Transform it to integers from 0-1000.
-    maxNum = 200.0
+    maxNum = 100.0
     print(x)
     print(x.shape)
     for i in xrange(x.shape[0]):
         for j in xrange(x.shape[1]):
-            x[i][j] = int(x[i][j]*maxNum)+500.0
+            x[i][j] = int(x[i][j]*maxNum)#+500.0
     for i in xrange(y.shape[0]):
-        y[i] = int(y[i]*maxNum)+500.0
+        y[i] = int(y[i]*maxNum)#+500.0
 
     train_X = x
     train_Y = y
@@ -169,26 +164,19 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
 
     n_hidden = 50
 
-
-    embedding = tf.get_variable("embedding", [1000, 1000])
-    
-    inputs = tf.nn.embedding_lookup(embedding, x_pre)
-
-    print("Inputs: " , inputs)
-
-    #Lastly we need to i guess flatten this. I don't know what other way to do it.
-    X = tf.reshape(inputs,[-1,3000])
-
-    x_size = 3000
+    x_size = 300
 
     weights = []
     biases = []
     coef = []
+    embedding = None
     # Weight initializations
     if reuse_weights:
-        (weights, biases) = load_weights(output_folder,weight_name_load,num_layers)
+        (weights, biases,embedding) = load_weights(output_folder,weight_name_load,num_layers)
 
     else:
+        embedding = tf.get_variable("embedding", [100, 100])
+        
         weights.append(init_weights((x_size,n_hidden))) #First
         biases.append(init_bias(n_hidden))
         weights.append(init_weights((n_hidden,n_hidden))) #Second
@@ -199,13 +187,22 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
         biases.append(init_bias(n_hidden))
         weights.append(init_weights((n_hidden,n_hidden))) #Fourth
         biases.append(init_bias(n_hidden))
-        weights.append(init_weights((n_hidden,1000))) #Out
-        biases.append(init_bias(1000))
+        weights.append(init_weights((n_hidden,100))) #Out
+        biases.append(init_bias(100))
 
     #for ele in coef:
     #    biases.append(ele)
     print("Coefficients")
     print(biases)
+
+    inputs = tf.nn.embedding_lookup(embedding, x_pre)
+
+    print("Inputs: " , inputs)
+
+    #Lastly we need to i guess flatten this. I don't know what other way to do it.
+    X = tf.reshape(inputs,[-1,300])
+
+
 
     # Forward propagation
     yhat    = forwardprop(X, weights,biases,num_layers)
@@ -271,20 +268,20 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
                     print("Epoch: " + str(curEpoch+1) + " : Loss: " + str(cum_loss))
                     train_loss_file.flush()
                 cum_loss = 0
-        save_weights(weights,biases,output_folder,weight_name_save,num_layers)
+        save_weights(weights,biases,output_folder,weight_name_save,num_layers,embedding)
     print "========Iterations completed in : " + str(time.time()-start_time) + " ========"
     sess.close()
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(
         description="Physics Net Training")
-    parser.add_argument("--reuse_weights",type=str,default='True')
-    parser.add_argument("--output_folder",type=str,default='results/Project_9_size_20/')
+    parser.add_argument("--reuse_weights",type=str,default='False')
+    parser.add_argument("--output_folder",type=str,default='results/Project_11_size_20/')
         #Generate the loss file/val file name by looking to see if there is a previous one, then creating/running it.
     parser.add_argument("--weight_name_load",type=str,default="")#This would be something that goes infront of w_1.txt. This would be used in saving the weights
     parser.add_argument("--weight_name_save",type=str,default="")
-    parser.add_argument("--n_batch",type=int,default=200)
-    parser.add_argument("--numEpochs",type=int,default=80)
+    parser.add_argument("--n_batch",type=int,default=100)
+    parser.add_argument("--numEpochs",type=int,default=30)
     parser.add_argument("--lr_rate",default=.01)
     parser.add_argument("--lr_decay",default=.9)
     parser.add_argument("--num_layers",default=1)
