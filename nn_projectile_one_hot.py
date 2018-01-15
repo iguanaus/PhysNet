@@ -102,7 +102,7 @@ def get_data(percentTest=.2,random_state=42):
     
 
     x = np.zeros(shape=(num_entries,3))
-    y = np.zeros(shape=(num_entries,3))
+    y = np.zeros(shape=(num_entries,1))
     for i in xrange(0,num_entries):
         #I will feed in two timesteps of the data
         y0 = random.uniform(0.0,.5)
@@ -129,12 +129,22 @@ def get_data(percentTest=.2,random_state=42):
 
 
         x[i] = [x1,x2,x3]
-        y[i] = [x4,x9,x20]
+        y[i] = [x4]
 
         #randNum1 = random.uniform(min_val, max_val)
         #randNum2 = randNum1#random.uniform(min_val, max_val)
         #x[i] = [randNum1,randNum2]
         #y[i] = [randNum1*randNum2]
+    #Transform it to integers from 0-1000.
+    maxNum = 200.0
+    print(x)
+    print(x.shape)
+    for i in xrange(x.shape[0]):
+        for j in xrange(x.shape[1]):
+            x[i][j] = int(x[i][j]*maxNum)+500.0
+    for i in xrange(y.shape[0]):
+        y[i] = int(y[i]*maxNum)+500.0
+
     train_X = x
     train_Y = y
     print x
@@ -149,13 +159,28 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
 
     train_X, train_Y , val_X, val_Y = get_data(percentTest=percent_val)
 
-    x_size = train_X.shape[1]
-    y_size = train_Y.shape[1]
+    x_size = 3#train_X.shape[1]
+    y_size = 1#train_Y.shape[1]
     print("X Size: " , x_size)
 
     # Symbols
-    X = tf.placeholder("float", shape=[None, x_size])
-    y = tf.placeholder("float", shape=[None, y_size])
+    x_pre = tf.placeholder("int32", shape=[None, x_size])
+    y = tf.placeholder("int64", shape=[None])
+
+    n_hidden = 50
+
+
+    embedding = tf.get_variable("embedding", [1000, 1000])
+    
+    inputs = tf.nn.embedding_lookup(embedding, x_pre)
+
+    print("Inputs: " , inputs)
+
+    #Lastly we need to i guess flatten this. I don't know what other way to do it.
+    X = tf.reshape(inputs,[-1,3000])
+
+    x_size = 3000
+
     weights = []
     biases = []
     coef = []
@@ -164,18 +189,18 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
         (weights, biases) = load_weights(output_folder,weight_name_load,num_layers)
 
     else:
-        weights.append(init_weights((x_size,20))) #First
-        biases.append(init_bias(20))
-        weights.append(init_weights((20,20))) #Second
-        biases.append(init_bias(20))
-        weights.append(init_weights((20,5)))   #Mid 5
+        weights.append(init_weights((x_size,n_hidden))) #First
+        biases.append(init_bias(n_hidden))
+        weights.append(init_weights((n_hidden,n_hidden))) #Second
+        biases.append(init_bias(n_hidden))
+        weights.append(init_weights((n_hidden,5)))   #Mid 5
         biases.append(init_bias(5))
-        weights.append(init_weights((5,20))) #Third
-        biases.append(init_bias(20))
-        weights.append(init_weights((20,20))) #Fourth
-        biases.append(init_bias(20))
-        weights.append(init_weights((20,3))) #Out
-        biases.append(init_bias(3))
+        weights.append(init_weights((5,n_hidden))) #Third
+        biases.append(init_bias(n_hidden))
+        weights.append(init_weights((n_hidden,n_hidden))) #Fourth
+        biases.append(init_bias(n_hidden))
+        weights.append(init_weights((n_hidden,1000))) #Out
+        biases.append(init_bias(1000))
 
     #for ele in coef:
     #    biases.append(ele)
@@ -184,9 +209,14 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
 
     # Forward propagation
     yhat    = forwardprop(X, weights,biases,num_layers)
+
+    print("yHat: " , yhat)
     
     # Backward propagation
-    cost = tf.reduce_sum(tf.square(y-yhat))
+
+    cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=yhat,labels=y))
+    #correct
+    #cost = tf.reduce_sum(tf.square(y-yhat))
 
     global_step = tf.Variable(0, trainable=False)
     learning_rate = lr_rate
@@ -213,11 +243,13 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
         print("========                         Iterations started                  ========")
         while curEpoch < numEpochs:
             batch_x = train_X[step * n_batch : (step+1) * n_batch]
-            batch_y = train_Y[step * n_batch : (step+1) * n_batch]
-            #print(batch_x[0])
+            batch_y = train_Y[step * n_batch : (step+1) * n_batch].reshape([-1])
+            #print(batch_x.shape)
+            #print(batch_y.shape)
+            #print(batch_x)
             #print(batch_y)
-            sess.run(optimizer, feed_dict={X: batch_x, y: batch_y})
-            myvals, new_loss = sess.run([yhat,cost],feed_dict={X:batch_x,y:batch_y})
+            sess.run(optimizer, feed_dict={x_pre: batch_x, y: batch_y})
+            myvals, new_loss = sess.run([yhat,cost],feed_dict={x_pre:batch_x,y:batch_y})
             #print((myvals[0]-batch_y[0])/myvals[0]*100.0)
             #print('\n')
             #print(myvals[0])
@@ -231,7 +263,7 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
                 train_loss_file.write(str(float(cum_loss))+str("\n"))
                 if (curEpoch % 10 == 0 or curEpoch == 1):
                     #Calculate the validation loss
-                    val_loss = sess.run(cost,feed_dict={X:val_X,y:val_Y})
+                    val_loss = sess.run(cost,feed_dict={x_pre:val_X,y:val_Y.reshape([-1])})
                     print("Validation loss: " , str(val_loss))
                     val_loss_file.write(str(float(val_loss))+str("\n"))
                     val_loss_file.flush()
@@ -247,13 +279,13 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(
         description="Physics Net Training")
     parser.add_argument("--reuse_weights",type=str,default='True')
-    parser.add_argument("--output_folder",type=str,default='results/Project_8_size_20/')
+    parser.add_argument("--output_folder",type=str,default='results/Project_9_size_20/')
         #Generate the loss file/val file name by looking to see if there is a previous one, then creating/running it.
     parser.add_argument("--weight_name_load",type=str,default="")#This would be something that goes infront of w_1.txt. This would be used in saving the weights
     parser.add_argument("--weight_name_save",type=str,default="")
-    parser.add_argument("--n_batch",type=int,default=100)
+    parser.add_argument("--n_batch",type=int,default=200)
     parser.add_argument("--numEpochs",type=int,default=80)
-    parser.add_argument("--lr_rate",default=.002)
+    parser.add_argument("--lr_rate",default=.01)
     parser.add_argument("--lr_decay",default=.9)
     parser.add_argument("--num_layers",default=1)
     parser.add_argument("--n_hidden",default=2)

@@ -1,0 +1,6 @@
+XValue
+Actual
+Predicted
+533.0,543.0,550.0
+[ 556.]
+507
