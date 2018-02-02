@@ -24,7 +24,7 @@ def read_file(filename):
 
 legend = []
 
-vals,a1,p1 = read_file("results/Project_7/test_out_file_21.txt")
+vals,a1,p1 = read_file("results/Project_11_size_20/test_out_file_single_22.txt")
 plt.plot([i for i in xrange(0,len(vals))],vals,'o')
 plt.plot([i+3 for i in xrange(0,len(a1))],a1,'o')
 plt.plot([i+3 for i in xrange(0,len(p1))],p1,'o')

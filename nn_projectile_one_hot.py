@@ -212,6 +212,9 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
     # Backward propagation
 
     cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=yhat,labels=y))
+    correct_prediction = tf.equal(tf.argmax(yhat, 1), y)
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
     #correct
     #cost = tf.reduce_sum(tf.square(y-yhat))
 
@@ -260,8 +263,8 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
                 train_loss_file.write(str(float(cum_loss))+str("\n"))
                 if (curEpoch % 10 == 0 or curEpoch == 1):
                     #Calculate the validation loss
-                    val_loss = sess.run(cost,feed_dict={x_pre:val_X,y:val_Y.reshape([-1])})
-                    print("Validation loss: " , str(val_loss))
+                    acc , val_loss = sess.run((accuracy,cost),feed_dict={x_pre:val_X,y:val_Y.reshape([-1])})
+                    print("Validation loss: " , str(val_loss), str(acc))
                     val_loss_file.write(str(float(val_loss))+str("\n"))
                     val_loss_file.flush()
 
@@ -276,13 +279,13 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(
         description="Physics Net Training")
     parser.add_argument("--reuse_weights",type=str,default='False')
-    parser.add_argument("--output_folder",type=str,default='results/Project_11_size_20/')
+    parser.add_argument("--output_folder",type=str,default='results/Project_12_00_acc/')
         #Generate the loss file/val file name by looking to see if there is a previous one, then creating/running it.
     parser.add_argument("--weight_name_load",type=str,default="")#This would be something that goes infront of w_1.txt. This would be used in saving the weights
     parser.add_argument("--weight_name_save",type=str,default="")
-    parser.add_argument("--n_batch",type=int,default=100)
-    parser.add_argument("--numEpochs",type=int,default=30)
-    parser.add_argument("--lr_rate",default=.01)
+    parser.add_argument("--n_batch",type=int,default=10)
+    parser.add_argument("--numEpochs",type=int,default=1)
+    parser.add_argument("--lr_rate",default=.0000001)
     parser.add_argument("--lr_decay",default=.9)
     parser.add_argument("--num_layers",default=1)
     parser.add_argument("--n_hidden",default=2)

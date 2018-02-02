@@ -9,6 +9,11 @@ def load_weights(output_folder,weight_load_name,num_layers):
     weights = []
     biases = []
     #Fine if everything is 2D
+    try:
+        embedding = np.loadtxt(output_folder+weight_load_name+"e_0.txt",delimiter=',')
+        embedding = tf.Variable(embedding,dtype=tf.float32)
+    except:
+        pass
     for i in xrange(0,1000):
         try:
             weight_i = np.loadtxt(output_folder+weight_load_name+"w_"+str(i)+".txt",delimiter=',')
@@ -21,29 +26,24 @@ def load_weights(output_folder,weight_load_name,num_layers):
             break
     #If it needs to be one D
     if True:
-        print("weights:")
-        print(weights)
+        #print("weights:")
+        #print(weights)
         num_layers = len(weights)-1
         weight_1 = np.loadtxt(output_folder+weight_load_name+"w_"+str(num_layers)+".txt",delimiter=',')
         weight_new_1 = tf.Variable(weight_1,dtype=tf.float32)
         weights[-1] = weight_new_1
 
         bias_1 = np.loadtxt(output_folder+weight_load_name+"b_"+str(num_layers)+".txt",delimiter=',')
-        print("bias: " , bias_1)
+        #print("bias: " , bias_1)
         bias_new_1 = tf.Variable(bias_1,dtype=tf.float32)
         biases[-1] = bias_new_1
 
 
-        #print(weights)
-    print("biases: " , len(biases))
-    print("weights: " , len(weights))
+    return weights , biases, embedding
 
-
-    return weights , biases
-
-output_folder = 'results/Project_7/'
+output_folder = 'results/Project_12_00_acc/'
 num_layers = 4
-weights, biases = load_weights(output_folder,"",num_layers)
+weights, biases, embedding = load_weights(output_folder,"",num_layers)
 print("Weights: " , weights)
 print("Biases: " , biases)
 
@@ -61,7 +61,11 @@ def forward(X):
     return htemp
 
 
-X1 = tf.placeholder("float", shape=[None, 3])
+x_pre = tf.placeholder("int32", shape=[None, 3])
+
+inputs = tf.nn.embedding_lookup(embedding, x_pre)
+
+X1 = tf.reshape(inputs,[-1,300])
 
 vals = forward(X1)
 
@@ -71,33 +75,44 @@ with tf.Session() as sess:
 
     #This will be a list of lists.
     data = np.zeros(shape=(2000,10))
-    for i in xrange(0, 2000):
+    ij = 0
+    while True:
+        
+        print(ij)
+        if ij > 1999:
+            break
+
         y0 = random.uniform(0.0,.5)
         v = random.uniform(0.0,.5)# These should be random. 
         g = random.uniform(0.0,.5)
         t = random.uniform(0.0,.5)
         dt = random.uniform(0.0,.5)
-        dt_2 = random.uniform(0.0,.5)
-        dt_3 = random.uniform(0.0,.5)
-        dt_4 = random.uniform(0.0,.5)
-        dt_5 = random.uniform(0.0,.5)
-        dt_6 = random.uniform(0.0,.5)
-
 
         x1 = y0 + v*t+-0.5*g*t*t
         x2 = y0 + v*(t+dt)+-0.5*g*(t+dt)*(t+dt)
         x3 = y0 + v*(t+2*dt)+-0.5*g*(t+2*dt)*(t+2*dt)
+        x4 = y0 + v*(t+3*dt)+-0.5*g*(t+3*dt)*(t+3*dt)
         x = np.reshape(np.array([x1,x2,x3]),(1,-1))
 
-        
+        x_temp = [x1,x2,x3,x4]
 
-        mycost = sess.run(vals,feed_dict={X1:x})[0]
+        if (min(x_temp) > 0.0 and max(x_temp) < 1.0):
+            maxNum = 100.0
+            print(x)
+            print(x.shape)
 
-        #print("Vals: " , vals.eval())
-        print("Mycost: " , mycost)
-        data[i] = np.array([y0,v,g,t,dt,dt_2,dt_3,dt_4,dt_5,dt_6])
+            for i in xrange(x.shape[0]):
+                for j in xrange(x.shape[1]):
+                    x[i][j] = int(x[i][j]*maxNum)#+500.
+            print(x)
 
-        #data[i] = np.array([y0,v,g,t,dt,mycost[0],mycost[1],mycost[2],mycost[3],mycost[4]])
+            mycost = sess.run(vals,feed_dict={x_pre:x})[0]
+
+            #print("Vals: " , vals.eval())
+            print("Mycost: " , mycost)
+            data[int(ij)] = np.array([y0,v,g,t,dt,mycost[0],mycost[1],mycost[2],mycost[3],mycost[4]])
+            ij += 1.0
+    print(data)
     if False: #2D PCA
 
         #2 D PCA
@@ -105,7 +120,8 @@ with tf.Session() as sess:
 
         projected = pca.fit_transform(data)
         print data.shape
-        plt.scatter(projected[:, 0], projected[:, 2], edgecolor='none', alpha=0.5,
+        print projected
+        plt.scatter(projected[:, 0], projected[:, 1], edgecolor='none', alpha=0.5,
                 cmap=plt.cm.get_cmap('spectral', 10))
         plt.xlabel('component 1')
         plt.ylabel('component 2')

@@ -1,0 +1,6 @@
+XValue
+Actual
+Predicted
+17.0,17.0,17.0
+[ 17.]
+17

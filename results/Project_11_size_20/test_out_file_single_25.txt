@@ -1,0 +1,6 @@
+XValue
+Actual
+Predicted
+17.0,18.0,18.0
+[ 19.]
+18

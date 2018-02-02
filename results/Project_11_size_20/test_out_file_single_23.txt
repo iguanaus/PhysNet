@@ -1,0 +1,6 @@
+XValue
+Actual
+Predicted
+28.0,29.0,29.0
+[ 30.]
+29

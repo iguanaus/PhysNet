@@ -1,0 +1,6 @@
+XValue
+Actual
+Predicted
+58.0,67.0,74.0
+81.
+80

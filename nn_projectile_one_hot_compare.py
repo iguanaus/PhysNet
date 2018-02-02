@@ -28,19 +28,26 @@ def init_bias(shape):
     biases = tf.random_normal([shape], stddev=.1)
     return tf.Variable(biases)
 
-def save_weights(weights,biases,output_folder,weight_name_save,num_layers):
+def save_weights(weights,biases,output_folder,weight_name_save,num_layers,embedding):
     print("Biases: " , biases, len(biases))
     for i in xrange(0, len(weights)):
         weight_i = weights[i].eval()
         np.savetxt(output_folder+weight_name_save+"w_"+str(i)+".txt",weight_i,delimiter=',')
         bias_i = biases[i].eval()
         np.savetxt(output_folder+weight_name_save+"b_"+str(i)+".txt",bias_i,delimiter=',')
+    np.savetxt(output_folder+weight_name_save+"e_0.txt",embedding.eval(),delimiter=',')
+
     return
 
 def load_weights(output_folder,weight_load_name,num_layers):
     weights = []
     biases = []
     #Fine if everything is 2D
+    try:
+        embedding = np.loadtxt(output_folder+weight_load_name+"e_0.txt",delimiter=',')
+        embedding = tf.Variable(embedding,dtype=tf.float32)
+    except:
+        pass
     for i in xrange(0,1000):
         try:
             weight_i = np.loadtxt(output_folder+weight_load_name+"w_"+str(i)+".txt",delimiter=',')
@@ -53,25 +60,26 @@ def load_weights(output_folder,weight_load_name,num_layers):
             break
     #If it needs to be one D
     if True:
-        print("weights:")
-        print(weights)
+        #print("weights:")
+        #print(weights)
         num_layers = len(weights)-1
         weight_1 = np.loadtxt(output_folder+weight_load_name+"w_"+str(num_layers)+".txt",delimiter=',')
         weight_new_1 = tf.Variable(weight_1,dtype=tf.float32)
         weights[-1] = weight_new_1
 
         bias_1 = np.loadtxt(output_folder+weight_load_name+"b_"+str(num_layers)+".txt",delimiter=',')
-        print("bias: " , bias_1)
+        #print("bias: " , bias_1)
         bias_new_1 = tf.Variable(bias_1,dtype=tf.float32)
         biases[-1] = bias_new_1
 
 
         #print(weights)
-    print("biases: " , len(biases))
-    print("weights: " , len(weights))
+    #print("biases: " , len(biases))
+    #print("weights: " , len(weights))
 
 
-    return weights , biases
+    return weights , biases, embedding
+
 
 def forwardprop(X, weights, biases, num_layers,dropout=False):
     htemp = None
@@ -109,38 +117,27 @@ def get_data(percentTest=.2,random_state=42):
         t = random.uniform(0.0,.5)
         dt = random.uniform(0.0,.5)
 
-        x0 = t
         x1 = y0 + v*t+-0.5*g*t*t
         x2 = y0 + v*(t+dt)+-0.5*g*(t+dt)*(t+dt)
         x3 = y0 + v*(t+2*dt)+-0.5*g*(t+2*dt)*(t+2*dt)
         x4 = y0 + v*(t+3*dt)+-0.5*g*(t+3*dt)*(t+3*dt)
-        x5 = y0 + v*(t+4*dt)+-0.5*g*(t+4*dt)*(t+4*dt)
-        x6 = y0 + v*(t+5*dt)+-0.5*g*(t+5*dt)*(t+5*dt)
-        x7 = y0 + v*(t+6*dt)+-0.5*g*(t+6*dt)*(t+6*dt)
-        x8 = y0 + v*(t+7*dt)+-0.5*g*(t+7*dt)*(t+7*dt)
-        x9 = y0 + v*(t+8*dt)+-0.5*g*(t+8*dt)*(t+8*dt)
-        x10 = y0 + v*(t+9*dt)+-0.5*g*(t+9*dt)*(t+9*dt)
-        x11 = y0 + v*(t+10*dt)+-0.5*g*(t+10*dt)*(t+10*dt)
-        x12 = y0 + v*(t+11*dt)+-0.5*g*(t+11*dt)*(t+11*dt)
-        x20 = y0 + v*(t+19*dt)+-0.5*g*(t+19*dt)*(t+19*dt)
 
 
-        x[i] = [x1,x2,x3]#,x4,x5,x6,x7,x8,x9,x10,x11,x12]
-        y[i] = [x4]#,x9,x20]
+        x_temp = [x1,x2,x3]
+        y_temp = [x4]
+        if (min(x_temp) > 0.0 and min(y_temp) > 0.0 and max(x_temp) < 1.0 and max(y_temp) < 1.0):
+            x[i] = [x1,x2,x3]
+            y[i] = [x4]
 
-
-        #randNum1 = random.uniform(min_val, max_val)
-        #randNum2 = randNum1#random.uniform(min_val, max_val)
-        #x[i] = [randNum1,randNum2]
-        #y[i] = [randNum1*randNum2]
-    maxNum = 200.0
+    #Transform it to integers from 0-1000.
+    maxNum = 100.0
     print(x)
     print(x.shape)
     for i in xrange(x.shape[0]):
         for j in xrange(x.shape[1]):
-            x[i][j] = int(x[i][j]*maxNum)+500.0
+            x[i][j] = int(x[i][j]*maxNum)#+500.0
     for i in xrange(y.shape[0]):
-        y[i] = int(y[i]*maxNum)+500.0
+        y[i] = int(y[i]*maxNum)#+500.0
 
     train_X = x
     train_Y = y
@@ -165,17 +162,18 @@ def main(output_folder,weight_name_load,spect_to_sample,sample_val,num_layers,n_
     x_pre = tf.placeholder("int32", shape=[None, x_size])
     y = tf.placeholder("int64", shape=[None])
 
-    embedding = tf.get_variable("embedding", [1000, 1000])
-    
+    #embedding = tf.get_variable("embedding", [100, 100])
+
+    weights, biases, embedding = load_weights(output_folder,weight_name_load,num_layers)
+
+
     inputs = tf.nn.embedding_lookup(embedding, x_pre)
 
     print("Inputs: " , inputs)
 
     #Lastly we need to i guess flatten this. I don't know what other way to do it.
-    X = tf.reshape(inputs,[-1,3000])
-    x_size = 3000
-
-    weights, biases = load_weights(output_folder,weight_name_load,num_layers)
+    X = tf.reshape(inputs,[-1,300])
+    x_size = 300
 
     yhat    = forwardprop(X, weights,biases,num_layers)
     
@@ -276,10 +274,10 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(
         description="Physics Net Training")
     #Use Project 4
-    parser.add_argument("--output_folder",type=str,default='results/Project_9_size_20/')
+    parser.add_argument("--output_folder",type=str,default='results/Project_11_size_20/')
         #Generate the loss file/val file name by looking to see if there is a previous one, then creating/running it.
     parser.add_argument("--weight_name_load",type=str,default="")#This would be something that goes infront of w_1.txt. This would be used in saving the weights
-    parser.add_argument("--spect_to_sample",type=int,default=22) #Zero Indexing
+    parser.add_argument("--spect_to_sample",type=int,default=27) #Zero Indexing
     parser.add_argument("--sample_val",type=str,default="True")
     parser.add_argument("--num_layers",default=4)
     parser.add_argument("--n_hidden",default=100)
