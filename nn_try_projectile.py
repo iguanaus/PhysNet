@@ -246,7 +246,7 @@ def main(reuse_weights,output_folder,weight_name_save,weight_name_load,n_batch,n
 if __name__=="__main__":
     parser = argparse.ArgumentParser(
         description="Physics Net Training")
-    parser.add_argument("--reuse_weights",type=str,default='True')
+    parser.add_argument("--reuse_weights",type=str,default='False')
     parser.add_argument("--output_folder",type=str,default='results/Project_8_size_20/')
         #Generate the loss file/val file name by looking to see if there is a previous one, then creating/running it.
     parser.add_argument("--weight_name_load",type=str,default="")#This would be something that goes infront of w_1.txt. This would be used in saving the weights
